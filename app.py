@@ -6,44 +6,38 @@ st.title("🔍 XRP Arbitrage Monitor")
 
 @st.cache_data(ttl=60)
 def get_luno_price():
-    url = "https://api.mybitx.com/api/1/ticker?pair=XRPZAR"
-    response = requests.get(url)
-    data = response.json()
-    return float(data['ask'])
+    resp = requests.get("https://api.mybitx.com/api/1/ticker?pair=XRPZAR")
+    return float(resp.json()['ask'])
 
 @st.cache_data(ttl=60)
 def get_coinbase_price():
-    url = "https://api.coinbase.com/v2/prices/XRP-EUR/spot"
-    response = requests.get(url)
-    data = response.json()
-    return float(data['data']['amount'])
+    resp = requests.get("https://api.coinbase.com/v2/prices/XRP-EUR/spot")
+    return float(resp.json()['data']['amount'])
 
 @st.cache_data(ttl=60)
 def get_exchange_rate():
-    url = "https://api.exchangerate.host/latest?base=EUR&symbols=ZAR"
-    response = requests.get(url)
-    data = response.json()
-    if "rates" in data and "ZAR" in data["rates"]:
-        return float(data["rates"]["ZAR"])
+    # Frankfurter endpoint: EUR base, ZAR symbol — no key needed
+    resp = requests.get("https://api.frankfurter.dev/v1/latest?base=EUR&symbols=ZAR")
+    data = resp.json()
+    if 'rates' in data and 'ZAR' in data['rates']:
+        return float(data['rates']['ZAR'])
     else:
-        raise ValueError(f"Exchange rate data not found. Full response: {data}")
+        raise ValueError(f"Unexpected exchange data: {data}")
 
 def calculate_gap():
-    luno_price = get_luno_price()
-    coinbase_price_eur = get_coinbase_price()
+    luno = get_luno_price()
+    coin_eur = get_coinbase_price()
     eur_to_zar = get_exchange_rate()
-    coinbase_price_zar = coinbase_price_eur * eur_to_zar
-    gap = luno_price - coinbase_price_zar
-    gap_percent = (gap / coinbase_price_zar) * 100
-    return luno_price, coinbase_price_eur, coinbase_price_zar, gap, gap_percent
+    coin_zar = coin_eur * eur_to_zar
+    gap = luno - coin_zar
+    pct = (gap / coin_zar) * 100
+    return luno, coin_eur, coin_zar, gap, pct
 
 try:
-    luno_price, coinbase_price_eur, coinbase_price_zar, gap, gap_percent = calculate_gap()
-
-    st.metric("Luno Price (ZAR)", f"ZAR {luno_price:.2f}")
-    st.metric("Coinbase Price (EUR)", f"EUR {coinbase_price_eur:.4f}")
-    st.metric("Coinbase Equivalent (ZAR)", f"ZAR {coinbase_price_zar:.2f}")
-    st.metric("Gap (ZAR)", f"ZAR {gap:.2f}", delta=f"{gap_percent:.2f}%")
-
+    luno, coin_eur, coin_zar, gap, pct = calculate_gap()
+    st.metric("Luno Price (ZAR)", f"ZAR {luno:.2f}")
+    st.metric("Coinbase Price (EUR)", f"EUR {coin_eur:.4f}")
+    st.metric("Coinbase Equivalent (ZAR)", f"ZAR {coin_zar:.2f}")
+    st.metric("Gap (ZAR)", f"ZAR {gap:.2f}", delta=f"{pct:.2f}%")
 except Exception as e:
     st.error(f"Error fetching data: {e}")
