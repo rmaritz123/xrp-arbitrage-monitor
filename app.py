@@ -23,7 +23,10 @@ def get_exchange_rate():
     url = "https://api.exchangerate.host/latest?base=EUR&symbols=ZAR"
     response = requests.get(url)
     data = response.json()
-    return float(data['rates']['ZAR'])
+    if "rates" in data and "ZAR" in data["rates"]:
+        return float(data["rates"]["ZAR"])
+    else:
+        raise ValueError(f"Exchange rate data not found. Full response: {data}")
 
 def calculate_gap():
     luno_price = get_luno_price()
