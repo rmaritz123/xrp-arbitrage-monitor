@@ -20,11 +20,11 @@ def get_coinbase_price():
 
 @st.cache_data(ttl=60)
 def get_exchange_rate():
-    url = "https://api.exchangerate.host/convert?from=EUR&to=ZAR"
+    url = "https://api.exchangerate.host/latest?base=EUR&symbols=ZAR"
     response = requests.get(url)
     data = response.json()
-    if "result" in data:
-        return float(data["result"])
+    if "rates" in data and "ZAR" in data["rates"]:
+        return float(data["rates"]["ZAR"])
     else:
         raise ValueError(f"Exchange rate data not found. Full response: {data}")
 
